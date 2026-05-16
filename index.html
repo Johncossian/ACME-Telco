@@ -962,7 +962,7 @@
 
     try {
       // Step 1: POST to get event ID
-      const postRes = await fetch(`${SPACE_URL}/call/chat`, {
+      const postRes = await fetch(`${SPACE_URL}/gradio_api/call/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -977,7 +977,7 @@
       if (!eventId) throw new Error("No event ID returned");
 
       // Step 2: GET to stream the result
-      const getRes = await fetch(`${SPACE_URL}/call/chat/${eventId}`);
+      const getRes = await fetch(`${SPACE_URL}/gradio_api/call/chat/${eventId}`);
       const reader = getRes.body.getReader();
       const decoder = new TextDecoder();
       let reply = "";

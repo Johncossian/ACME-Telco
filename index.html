@@ -888,7 +888,6 @@
 </div>
 
 <script>
-  const HF_TOKEN = "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";
   const SPACE_URL = "https://johncossian-acme-telco.hf.space";
 
   let chatOpen = false;
@@ -964,8 +963,7 @@
       const response = await fetch(`${SPACE_URL}/api/predict`, {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${HF_TOKEN}`
+          "Content-Type": "application/json"
         },
         body: JSON.stringify({
           data: [text, conversationHistory.slice(0, -1)]

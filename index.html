@@ -894,6 +894,7 @@
   let conversationHistory = [];
   let isTyping = false;
   let chatInitialized = false;
+  const sessionHash = Math.random().toString(36).substring(2);
 
   function toggleChat() {
     chatOpen = !chatOpen;
@@ -960,30 +961,53 @@
     showTyping();
 
     try {
-      const response = await fetch(`${SPACE_URL}/api/predict`, {
+      // Step 1: POST to get event ID
+      const postRes = await fetch(`${SPACE_URL}/call/chat`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          data: [text, conversationHistory.slice(0, -1)]
+          data: [text],
+          session_hash: sessionHash
         })
       });
 
-      const result = await response.json();
-      removeTyping();
+      const postData = await postRes.json();
+      const eventId = postData.event_id;
 
+      if (!eventId) throw new Error("No event ID returned");
+
+      // Step 2: GET to stream the result
+      const getRes = await fetch(`${SPACE_URL}/call/chat/${eventId}`);
+      const reader = getRes.body.getReader();
+      const decoder = new TextDecoder();
       let reply = "";
-      if (result.data && result.data[0]) {
-        reply = result.data[0];
-      } else if (result.error) {
-        reply = "I'm having a moment — please try again shortly.";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value);
+        const lines = chunk.split("\n");
+        for (const line of lines) {
+          if (line.startsWith("data: ")) {
+            try {
+              const parsed = JSON.parse(line.slice(6));
+              if (Array.isArray(parsed) && parsed[0]) {
+                reply = typeof parsed[0] === "string" ? parsed[0] : (parsed[0].content || "");
+              }
+            } catch {}
+          }
+        }
       }
+
+      removeTyping();
 
       if (reply) {
         addMessage("agent", reply);
         conversationHistory.push({ role: "assistant", content: reply });
+      } else {
+        addMessage("agent", "I'm having a moment — please try again shortly.");
       }
+
     } catch (err) {
       removeTyping();
       addMessage("agent", "I'm having trouble connecting right now. Please try again in a moment.");
